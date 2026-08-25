@@ -1,0 +1,747 @@
+// ---------------------------------------------
+// Variables
+// ---------------------------------------------
+$color-bg: #0f1115;
+$color-surface: #171a21;
+$color-surface-alt: #1f232c;
+$color-border: #2a2f3a;
+$color-text: #e8eaed;
+$color-text-muted: #9aa1ac;
+$color-primary: #6366f1;
+$color-primary-dark: #4f52d6;
+$color-success: #10b981;
+$color-warning: #f59e0b;
+$color-danger: #ef4444;
+
+$font-heading: 'Raleway', sans-serif;
+$font-body: 'Roboto', sans-serif;
+
+$radius: 14px;
+$radius-sm: 8px;
+
+@mixin card {
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+  padding: 1.25rem;
+}
+
+@mixin button-base {
+  border: none;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  font-family: $font-body;
+  font-weight: 600;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+
+  &:hover { opacity: 0.9; }
+  &:active { transform: scale(0.98); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+// ---------------------------------------------
+// Reset & base
+// ---------------------------------------------
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: $color-bg;
+  color: $color-text;
+  font-family: $font-body;
+}
+
+.root { min-height: 100vh; }
+
+h1, h2, h3 { font-family: $font-heading; margin: 0; }
+
+button, input, select { font-family: inherit; }
+
+// ---------------------------------------------
+// Auth (login / registro)
+// ---------------------------------------------
+.auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.auth-card {
+  @include card;
+  width: 100%;
+  max-width: 380px;
+
+  &__header { text-align: center; margin-bottom: 1.5rem; }
+  &__logo { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  &__title { font-size: 1.5rem; }
+  &__subtitle { color: $color-text-muted; font-size: 0.9rem; margin-top: 0.4rem; }
+
+  &__error {
+    background: rgba($color-danger, 0.12);
+    color: $color-danger;
+    border-radius: $radius-sm;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  &__footer {
+    margin-top: 1.25rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: $color-text-muted;
+  }
+
+  &__toggle-btn {
+    background: none;
+    border: none;
+    color: $color-primary;
+    font-weight: 600;
+    cursor: pointer;
+    margin-left: 0.3rem;
+  }
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+
+  &__group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    label { font-size: 0.8rem; color: $color-text-muted; }
+
+    input, select {
+      background: $color-surface-alt;
+      border: 1px solid $color-border;
+      border-radius: $radius-sm;
+      padding: 0.65rem 0.75rem;
+      color: $color-text;
+      font-size: 0.95rem;
+
+      &:focus { outline: 2px solid $color-primary; }
+    }
+  }
+
+  &__submit-btn {
+    @include button-base;
+    background: $color-primary;
+    color: white;
+    padding: 0.75rem;
+    font-size: 0.95rem;
+    margin-top: 0.4rem;
+  }
+}
+
+// ---------------------------------------------
+// Dashboard
+// ---------------------------------------------
+.dashboard-wrapper {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  &__title { font-size: 1.4rem; }
+  &__user { font-size: 0.8rem; color: $color-text-muted; }
+
+  &__logout {
+    @include button-base;
+    background: $color-surface-alt;
+    color: $color-text;
+    border: 1px solid $color-border;
+    padding: 0.5rem 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+  }
+}
+
+.upload-box {
+  @include card;
+  border-style: dashed;
+
+  &__content {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    cursor: pointer;
+
+    strong { display: block; font-size: 0.95rem; }
+    p { margin: 0.2rem 0 0; color: $color-text-muted; font-size: 0.8rem; }
+  }
+
+  &__icon { font-size: 1.6rem; }
+}
+
+.glucose-card {
+  @include card;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  &__label { color: $color-text-muted; font-size: 0.8rem; }
+
+  &__value-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    margin-top: 0.2rem;
+  }
+
+  &__value { font-size: 2.4rem; font-weight: 700; font-family: $font-heading; }
+  &__unit { color: $color-text-muted; font-size: 0.9rem; }
+
+  &__badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+}
+
+.chart-card {
+  @include card;
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  &__subtitle { color: $color-text-muted; font-size: 0.8rem; }
+}
+
+.period-tabs {
+  display: flex;
+  gap: 0.4rem;
+  background: $color-surface-alt;
+  border-radius: $radius-sm;
+  padding: 0.25rem;
+}
+
+.tab-btn {
+  @include button-base;
+  background: transparent;
+  color: $color-text-muted;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+
+  &.active { background: $color-primary; color: white; }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.stat-pill {
+  background: $color-surface-alt;
+  border-radius: $radius-sm;
+  padding: 0.6rem;
+  text-align: center;
+
+  span { display: block; color: $color-text-muted; font-size: 0.7rem; }
+  strong { font-size: 1rem; }
+}
+
+.chart-svg-container { width: 100%; }
+.chart-svg { width: 100%; height: auto; }
+
+.fab-btn {
+  @include button-base;
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  background: $color-primary;
+  color: white;
+  padding: 0.85rem 1.2rem;
+  font-size: 0.9rem;
+  box-shadow: 0 8px 24px rgba($color-primary, 0.4);
+}
+
+// ---------------------------------------------
+// Modales (glucosa manual / captura de comida)
+// ---------------------------------------------
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 100;
+}
+
+.modal-card {
+  @include card;
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    h3 { font-size: 1.1rem; }
+  }
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: $color-text-muted;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+
+  &__group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    label { font-size: 0.8rem; color: $color-text-muted; }
+
+    input, select {
+      background: $color-surface-alt;
+      border: 1px solid $color-border;
+      border-radius: $radius-sm;
+      padding: 0.65rem 0.75rem;
+      color: $color-text;
+      font-size: 0.95rem;
+
+      &:focus { outline: 2px solid $color-primary; }
+    }
+  }
+}
+
+.modal-submit-btn {
+  @include button-base;
+  background: $color-primary;
+  color: white;
+  padding: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.meal-upload-area {
+  border: 1px dashed $color-border;
+  border-radius: $radius-sm;
+  padding: 1rem;
+  text-align: center;
+}
+
+.meal-upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+
+  .upload-icon { font-size: 1.8rem; }
+  p { margin: 0; color: $color-text-muted; font-size: 0.8rem; }
+}
+
+.meal-preview-img {
+  max-width: 100%;
+  border-radius: $radius-sm;
+}
+
+// ---------------------------------------------
+// Widget de chat IA
+// ---------------------------------------------
+.ai-chat-widget {
+  position: fixed;
+  left: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 90;
+}
+
+.chat-fab-btn {
+  @include button-base;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  color: $color-text;
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+}
+
+.chat-window {
+  @include card;
+  position: fixed;
+  left: 1.25rem;
+  bottom: 4.5rem;
+  width: min(360px, calc(100vw - 2.5rem));
+  height: min(480px, calc(100vh - 6rem));
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+
+  &.hidden { display: none; }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid $color-border;
+  }
+}
+
+.quota-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.65rem;
+  color: $color-success;
+  border: 1px solid $color-success;
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+}
+
+.btn-close-chat {
+  background: none;
+  border: none;
+  color: $color-text-muted;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid $color-border;
+}
+
+.chip-btn {
+  @include button-base;
+  background: $color-surface-alt;
+  color: $color-text;
+  font-size: 0.72rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid $color-border;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.msg {
+  max-width: 85%;
+  padding: 0.55rem 0.75rem;
+  border-radius: $radius-sm;
+  font-size: 0.85rem;
+  line-height: 1.35;
+
+  &.ai {
+    align-self: flex-start;
+    background: $color-surface-alt;
+  }
+
+  &.user {
+    align-self: flex-end;
+    background: $color-primary;
+    color: white;
+  }
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid $color-border;
+
+  input {
+    flex: 1;
+    background: $color-surface-alt;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    padding: 0.55rem 0.7rem;
+    color: $color-text;
+    font-size: 0.85rem;
+
+    &:focus { outline: 2px solid $color-primary; }
+  }
+
+  button {
+    @include button-base;
+    background: $color-primary;
+    color: white;
+    padding: 0 0.9rem;
+    font-size: 0.8rem;
+  }
+}
+
+// ---------------------------------------------
+// Historial de comidas
+// ---------------------------------------------
+.meals-history {
+  @include card;
+
+  h3 { margin-bottom: 0.2rem; }
+}
+
+.meals-empty {
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  margin: 0.75rem 0 0;
+}
+
+.meals-history__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.meal-entry {
+  position: relative;
+  display: flex;
+  gap: 0.8rem;
+  background: $color-surface-alt;
+  border-radius: $radius-sm;
+  padding: 0.75rem;
+  padding-right: 2.4rem;
+
+  &__img {
+    width: 84px;
+    height: 84px;
+    border-radius: $radius-sm;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+
+    strong { font-size: 0.9rem; }
+  }
+
+  &__badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    background: rgba($color-primary, 0.15);
+    color: $color-primary;
+  }
+
+  &__macros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    color: $color-text-muted;
+  }
+
+  &__impact {
+    display: inline-block;
+    width: fit-content;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+
+    &--low { background: rgba($color-success, 0.15); color: $color-success; }
+    &--medium { background: rgba($color-warning, 0.15); color: $color-warning; }
+    &--high { background: rgba($color-danger, 0.15); color: $color-danger; }
+  }
+
+  &__advice {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    color: $color-text;
+  }
+}
+
+// ---------------------------------------------
+// Aviso de datos faltantes + doble botón flotante
+// ---------------------------------------------
+.upload-box--warning {
+  border-color: rgba($color-warning, 0.5);
+  background: rgba($color-warning, 0.08);
+
+  .upload-box__icon { font-size: 1.4rem; }
+  strong { color: $color-warning; }
+}
+
+.fab-stack {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+  z-index: 80;
+
+  .fab-btn {
+    position: static;
+  }
+
+  .fab-btn--secondary {
+    background: $color-surface;
+    border: 1px solid $color-border;
+    color: $color-text;
+    box-shadow: none;
+    font-size: 0.85rem;
+    padding: 0.7rem 1rem;
+  }
+}
+
+// ---------------------------------------------
+// Header: acciones agrupadas + botón de config
+// ---------------------------------------------
+.dashboard-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dashboard-header__settings {
+  @include button-base;
+  background: $color-surface-alt;
+  border: 1px solid $color-border;
+  color: $color-text;
+  font-size: 1rem;
+  padding: 0.5rem 0.65rem;
+}
+
+// ---------------------------------------------
+// Alerta de hiper/hipoglucemia
+// ---------------------------------------------
+.emergency-overlay {
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.emergency-card {
+  max-width: 380px;
+  text-align: center;
+
+  &__icon { font-size: 2.2rem; margin-bottom: 0.4rem; }
+
+  &__title {
+    font-size: 1.15rem;
+    color: $color-danger;
+    margin-bottom: 0.3rem;
+  }
+
+  &__reading {
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: $font-heading;
+    margin: 0 0 0.6rem;
+  }
+
+  &__note {
+    color: $color-text-muted;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin-bottom: 1.1rem;
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+}
+
+.emergency-action {
+  @include button-base;
+  display: block;
+  text-decoration: none;
+  text-align: center;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  border-radius: $radius-sm;
+  background: $color-surface-alt;
+  color: $color-text;
+  border: 1px solid $color-border;
+
+  &--sos {
+    background: $color-danger;
+    color: white;
+    border: none;
+    font-weight: 700;
+  }
+
+  &--muted {
+    color: $color-text-muted;
+    border-style: dashed;
+  }
+}
+
+.emergency-dismiss-btn {
+  background: none;
+  border: none;
+  color: $color-text-muted;
+  font-size: 0.8rem;
+  margin-top: 1rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.meal-entry__delete {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  font-size: 0.95rem;
+  opacity: 0.55;
+  cursor: pointer;
+  padding: 0.2rem;
+  line-height: 1;
+
+  &:hover { opacity: 1; }
+}
