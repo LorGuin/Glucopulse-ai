@@ -241,6 +241,15 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
           </div>
         </section>
 
+        <div class="fab-stack">
+          <button id="add-glucose-fab" class="fab-btn fab-btn--secondary">
+            🩸 Registrar Glucosa
+          </button>
+          <button id="add-meal-fab" class="fab-btn">
+            📷 Registrar Plato
+          </button>
+        </div>
+
         <section class="chart-card">
           <div class="chart-card__header">
             <div>
@@ -284,15 +293,6 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
         </section>
 
         ${renderMealsHistory()}
-
-        <div class="fab-stack">
-          <button id="add-glucose-fab" class="fab-btn fab-btn--secondary">
-            🩸 Registrar Glucosa
-          </button>
-          <button id="add-meal-fab" class="fab-btn">
-            📷 Registrar Plato
-          </button>
-        </div>
       </div>
     `;
 

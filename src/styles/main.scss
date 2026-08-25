@@ -614,17 +614,15 @@ button, input, select { font-family: inherit; }
 }
 
 .fab-stack {
-  position: fixed;
-  right: 1.25rem;
-  bottom: 1.25rem;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-direction: row;
   gap: 0.6rem;
-  z-index: 80;
+  margin-bottom: 1rem;
 
   .fab-btn {
     position: static;
+    flex: 1;
+    justify-content: center;
   }
 
   .fab-btn--secondary {
