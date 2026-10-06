@@ -19,6 +19,7 @@ import type { InsightsState, GeminiInsights } from "../components/AiInsightsPane
 import { buildDataSummary } from "../utils/glucoseSummary";
 import { callGemini } from "../services/aiClient";
 import { escapeHtml } from "../utils/escapeHtml";
+import { saveCgmReadings, loadCgmReadings, mergeReadings } from "../services/cgmService";
 
 export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLElement {
   const container = document.createElement("div");
@@ -28,6 +29,7 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
   // (cargadas desde Firestore) se mantienen separadas y se combinan al
   // usarlas, para no perder ni duplicar datos entre recargas.
   let csvReadings: GlucoseReading[] = [];
+  let csvStatus = ""; // mensaje de estado de la carga/guardado del CSV
   let manualReadings: GlucoseReading[] = [];
   let currentPeriod: 'day' | 'week' | 'month' = 'day';
   let recentMeals: MealWithId[] = [];
@@ -130,27 +132,57 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
     checkForEmergency();
   };
 
+  // Lecturas del sensor guardadas en Firestore (persisten entre recargas).
+  const loadSavedCgm = async () => {
+    try {
+      const saved = await loadCgmReadings();
+      csvReadings = mergeReadings(saved, csvReadings);
+      if (saved.length > 0) csvStatus = "";
+    } catch (err) {
+      console.warn("No se pudieron cargar las lecturas guardadas del sensor:", err);
+    }
+    render();
+    checkForEmergency();
+  };
+
   const handleFileUpload = async (file: File) => {
     const reader = new FileReader();
     reader.onload = async (e) => {
-      try {
-        const content = e.target?.result as string;
-        csvReadings = parseCGMFile(content);
-
-        const stats = analyzePeriod(getCombinedReadings(), currentPeriod);
-
-        const docId = await saveCGMAnalysis(stats, file.name);
-        console.log("✅ Guardado con éxito. ID del documento:", docId);
-
-        render();
-        checkForEmergency();
-      } catch (err: any) {
-        console.error("❌ Error al guardar en Firebase:", err);
-        alert("Error de Firebase: " + (err.message || err.code));
+      const content = e.target?.result as string;
+      const parsed = parseCGMFile(content);
+      if (parsed.length === 0) {
+        alert("No se encontraron lecturas válidas en el archivo. Revisá que sea el CSV exportado del sensor.");
+        return;
       }
+
+      csvReadings = mergeReadings(csvReadings, parsed);
+      csvStatus = `Guardando ${parsed.length} lecturas en la nube…`;
+      render();
+
+      try {
+        const days = await saveCgmReadings(parsed);
+        csvStatus = `✅ ${parsed.length} lecturas guardadas (${days} días)`;
+      } catch (err: any) {
+        console.error("❌ Error al guardar lecturas del sensor:", err);
+        csvStatus = `❌ No se pudieron guardar las lecturas: ${err.message || err.code}`;
+      }
+
+      // Resumen del archivo (solo estadísticas, sin las miles de lecturas:
+      // antes se guardaban todas en un único documento y superaba el límite
+      // de 1 MB de Firestore, por eso fallaba).
+      try {
+        const stats = analyzePeriod(parsed, "month");
+        await saveCGMAnalysis(stats, file.name);
+      } catch (err) {
+        console.warn("No se pudo guardar el resumen del CSV:", err);
+      }
+
+      render();
+      checkForEmergency();
     };
     reader.readAsText(file);
   };
+
 
   const impactLabel: Record<string, string> = {
     low: "Impacto bajo",
@@ -240,7 +272,8 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
           <label for="cgm-file-input" class="upload-box__content">
             <span class="upload-box__icon">📊</span>
             <div>
-              <strong>${csvReadings.length > 0 ? 'Archivo cargado (' + csvReadings.length + ' lecturas)' : 'Arrastra o sube tu archivo CSV del sensor'}</strong>
+              <strong>${csvReadings.length > 0 ? `${csvReadings.length} lecturas del sensor guardadas · tocá para sumar otro CSV` : 'Arrastra o sube tu archivo CSV del sensor'}</strong>
+              ${csvStatus ? `<p class="upload-box__status">${escapeHtml(csvStatus)}</p>` : ""}
               <p>El sistema calculará automáticamente tendencias, picos y tiempo en rango.</p>
             </div>
           </label>
@@ -381,6 +414,7 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
 
   // 2. Cargar comidas, mediciones manuales y contactos de emergencia
   loadRecentMeals();
+  loadSavedCgm();
   loadEmergencyContacts().then(() => {
     loadManualReadings();
   });
@@ -405,7 +439,14 @@ async function saveCGMAnalysis(stats: PeriodStats, name: string): Promise<string
     fileName: name,
     createdAt: serverTimestamp(),
     uploadedAt: new Date().toISOString(),
-    stats,
+    stats: {
+      period: stats.period,
+      average: stats.average,
+      max: stats.max,
+      min: stats.min,
+      timeInRangePercent: stats.timeInRangePercent,
+      totalReadings: stats.readings.length,
+    },
   });
 
   return docRef.id;
