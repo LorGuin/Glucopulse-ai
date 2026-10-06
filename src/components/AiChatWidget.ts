@@ -4,6 +4,32 @@ import type { GlucoseReading } from "../utils/glucoseAnalyzer";
 import type { MealRecord } from "../types/meal";
 import { buildDataSummary } from "../utils/glucoseSummary";
 import { callGemini } from "../services/aiClient";
+import { escapeHtml } from "../utils/escapeHtml";
+
+// Convierte el markdown básico que devuelve la IA (**negrita**, listas,
+// saltos de línea) en HTML seguro: primero se escapa todo y recién después
+// se agregan nuestras propias etiquetas.
+function renderMarkdownLite(text: string): string {
+  const lines = escapeHtml(text).split(/\r?\n/);
+  let html = "";
+  let inList = false;
+  for (const raw of lines) {
+    const line = raw
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|\s)\*(?!\s)(.+?)\*(?=\s|$|[.,;:!?])/g, "$1<em>$2</em>")
+      .replace(/^#{1,6}\s+(.*)$/, "<strong>$1</strong>");
+    const item = /^\s*(?:[-*•]|\d+[.)])\s+(.*)$/.exec(line);
+    if (item) {
+      if (!inList) { html += "<ul>"; inList = true; }
+      html += `<li>${item[1]}</li>`;
+      continue;
+    }
+    if (inList) { html += "</ul>"; inList = false; }
+    html += line.trim() ? `<p>${line}</p>` : "";
+  }
+  if (inList) html += "</ul>";
+  return html;
+}
 
 export class AiChatWidget {
   private targetParent: HTMLElement;
@@ -89,14 +115,25 @@ export class AiChatWidget {
       });
     });
 
+    const sendBtn = widget.querySelector("#chat-submit-btn") as HTMLButtonElement;
+    const suggestions = widget.querySelector(".chat-suggestions") as HTMLElement;
+    let busy = false;
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const text = input.value.trim();
-      if (!text) return;
+      if (!text || busy) return;
+
+      // No deshabilitamos el input: en el celular eso cierra y reabre el
+      // teclado y hace "saltar" la ventana. Solo bloqueamos el botón.
+      busy = true;
+      sendBtn.disabled = true;
+      suggestions.classList.add("collapsed"); // más lugar para la conversación
 
       this.appendMessage(messages, text, "user");
       input.value = "";
-      input.disabled = true;
+      const typing = this.appendMessage(messages, "Escribiendo…", "ai");
+      typing.classList.add("typing");
 
       const user = auth.currentUser;
       let recentMeals: MealRecord[] = [];
@@ -115,24 +152,28 @@ export class AiChatWidget {
 
       try {
         const aiAnswer = await this.askAI(text, context);
+        typing.remove();
         this.appendMessage(messages, aiAnswer, "ai");
         this.history.push({ role: "user", text }, { role: "ai", text: aiAnswer });
         this.history = this.history.slice(-10);
       } catch (err: any) {
+        typing.remove();
         this.appendMessage(messages, `❌ Error de IA: ${err.message || "No se pudo obtener respuesta."}`, "ai");
       } finally {
-        input.disabled = false;
-        input.focus();
+        busy = false;
+        sendBtn.disabled = false;
       }
     });
   }
 
-  private appendMessage(container: HTMLElement, text: string, sender: "user" | "ai"): void {
+  private appendMessage(container: HTMLElement, text: string, sender: "user" | "ai"): HTMLElement {
     const msg = document.createElement("div");
     msg.className = `msg ${sender}`;
-    msg.innerText = text;
+    if (sender === "ai") msg.innerHTML = renderMarkdownLite(text);
+    else msg.textContent = text;
     container.appendChild(msg);
     container.scrollTop = container.scrollHeight;
+    return msg;
   }
 
   private async askAI(message: string, context: unknown): Promise<string> {
