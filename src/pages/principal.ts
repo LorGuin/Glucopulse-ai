@@ -14,6 +14,11 @@ import { getEmergencyContacts } from "../services/emergencyContactsService";
 import type { EmergencyContacts } from "../types/emergency";
 import { getRecentMeals, deleteMeal } from "../services/aiFoodService";
 import type { MealWithId } from "../services/aiFoodService";
+import { renderInsightsSection } from "../components/AiInsightsPanel";
+import type { InsightsState, GeminiInsights } from "../components/AiInsightsPanel";
+import { buildDataSummary } from "../utils/glucoseSummary";
+import { callGemini } from "../services/aiClient";
+import { escapeHtml } from "../utils/escapeHtml";
 
 export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLElement {
   const container = document.createElement("div");
@@ -34,6 +39,22 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
     contactPhone: "",
   };
   let lastAlertedReadingTime: number | null = null;
+  let insights: InsightsState = { loading: false, error: null, data: null, generatedAt: null };
+
+  const runInsights = async () => {
+    insights = { ...insights, loading: true, error: null };
+    render();
+    try {
+      // Para el análisis traemos más historial de comidas que el que se muestra.
+      const meals = await getRecentMeals(30).catch(() => recentMeals);
+      const summary = buildDataSummary(getCombinedReadings(), meals);
+      const { data, proveedor } = await callGemini<{ data: GeminiInsights; proveedor?: string }>("analyze", { summary });
+      insights = { loading: false, error: null, data, generatedAt: new Date(), proveedor };
+    } catch (err: any) {
+      insights = { ...insights, loading: false, error: err.message || "No se pudo completar el análisis." };
+    }
+    render();
+  };
 
   const getCombinedReadings = (): GlucoseReading[] => {
     return [...csvReadings, ...manualReadings].sort(
@@ -121,9 +142,6 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
         const docId = await saveCGMAnalysis(stats, file.name);
         console.log("✅ Guardado con éxito. ID del documento:", docId);
 
-        const chatWidget = new AiChatWidget(document.body, getCombinedReadings());
-        chatWidget.render();
-
         render();
         checkForEmergency();
       } catch (err: any) {
@@ -154,10 +172,10 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
       .map(
         (m) => `
         <article class="meal-entry" data-meal-id="${m.id}">
-          <img src="${m.imageUrl}" alt="${m.dishName}" class="meal-entry__img" />
+          <img src="${escapeHtml(m.imageUrl)}" alt="${escapeHtml(m.dishName)}" class="meal-entry__img" />
           <div class="meal-entry__info">
             <div class="meal-entry__header">
-              <strong>${m.dishName}</strong>
+              <strong>${escapeHtml(m.dishName)}</strong>
               <span class="meal-entry__badge meal-entry__badge--${m.glycemicImpact}">${m.macros.calories} kcal</span>
             </div>
             <div class="meal-entry__macros">
@@ -167,7 +185,7 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
               <span>🍗 ${m.macros.proteinGrams}g proteína</span>
             </div>
             <span class="meal-entry__impact meal-entry__impact--${m.glycemicImpact}">${impactLabel[m.glycemicImpact] || m.glycemicImpact}</span>
-            <p class="meal-entry__advice">${m.aiAdviceNextMeal}</p>
+            <p class="meal-entry__advice">${escapeHtml(m.aiAdviceNextMeal)}</p>
           </div>
           <button type="button" class="meal-entry__delete" data-delete-id="${m.id}" title="Borrar esta comida">🗑️</button>
         </article>
@@ -292,6 +310,8 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
           </div>
         </section>
 
+        ${renderInsightsSection(combined, insights)}
+
         ${renderMealsHistory()}
       </div>
     `;
@@ -303,6 +323,10 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
     container.querySelector("#logout-btn")?.addEventListener("click", async () => {
       await signOut(auth);
       if (params?.goTo) params.goTo("/inicio");
+    });
+
+    container.querySelector("#run-insights-btn")?.addEventListener("click", () => {
+      runInsights();
     });
 
     container.querySelector("#emergency-settings-btn")?.addEventListener("click", () => {
@@ -361,9 +385,10 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
     loadManualReadings();
   });
 
-  // 3. Montar el chatbot apenas se monta el dashboard
+  // 3. Montar el chatbot una sola vez. Recibe una función (no una copia de
+  //    los datos) para leer siempre las lecturas más recientes.
   setTimeout(() => {
-    const chatWidget = new AiChatWidget(document.body, getCombinedReadings());
+    const chatWidget = new AiChatWidget(document.body, getCombinedReadings);
     chatWidget.render();
   }, 100);
 

@@ -83,9 +83,9 @@ export class MealCaptureModal {
 
         img.onload = () => {
           // Redibuja en un canvas y exporta como JPEG, sin importar el
-          // formato original (AVIF, PNG, etc. — Groq solo acepta
+          // formato original (AVIF, PNG, etc. — Gemini acepta solo
           // JPEG/PNG/WEBP). De paso comprime fotos grandes de celular
-          // para no pasar el límite de 4MB de Groq.
+          // para no pasar el límite de tamaño de la API.
           const maxDim = 1280;
           let { width, height } = img;
           if (width > maxDim || height > maxDim) {

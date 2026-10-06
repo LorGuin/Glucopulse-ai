@@ -2,13 +2,15 @@ import type { GlucoseReading } from "./glucoseAnalyzer";
 import type { MacroNutrients } from "../types/meal";
 
 export interface CorrelationResult {
-  preMealGlucose: number;
-  postMealPeak: number;
-  delta: number;
+  preMealGlucose: number | null;
+  postMealPeak: number | null;
+  delta: number | null;
   causedSpike: boolean;
   impactLevel: 'low' | 'medium' | 'high';
   adviceNextMeal: string;
 }
+
+const MIN = 60 * 1000;
 
 export function correlateMealWithGlucose(
   mealTime: Date,
@@ -16,40 +18,49 @@ export function correlateMealWithGlucose(
   macros: MacroNutrients,
   dishName: string
 ): CorrelationResult {
-  const mealTimestamp = mealTime.getTime();
-  const twoHoursAfter = mealTimestamp + 2 * 60 * 60 * 1000;
+  const t = mealTime.getTime();
 
-  const windowReadings = cgmData.filter(
-    (r) => r.date.getTime() >= mealTimestamp && r.date.getTime() <= twoHoursAfter
-  );
+  // Glucosa previa = la última lectura en los 30 min ANTES de comer
+  // (antes se tomaba la primera lectura posterior, que ya puede estar subiendo).
+  const before = cgmData.filter((r) => r.date.getTime() <= t && r.date.getTime() >= t - 30 * MIN);
+  const after = cgmData.filter((r) => r.date.getTime() > t && r.date.getTime() <= t + 120 * MIN);
 
-  const preReading = windowReadings.length > 0 ? windowReadings[0].value : 100;
-  const peakReading =
-    windowReadings.length > 0 ? Math.max(...windowReadings.map((r) => r.value)) : preReading;
+  // Sin lecturas alrededor de la comida: NO inventamos valores (antes se
+  // guardaba 100 mg/dL como si fuera real). Se clasifica solo por macros.
+  if (before.length === 0 || after.length === 0) {
+    const highByMacros = macros.sugarGrams > 15 || macros.carbsGrams > 60;
+    const mediumByMacros = macros.carbsGrams > 30;
+    return {
+      preMealGlucose: null,
+      postMealPeak: null,
+      delta: null,
+      causedSpike: false,
+      impactLevel: highByMacros ? 'high' : mediumByMacros ? 'medium' : 'low',
+      adviceNextMeal:
+        `ℹ️ No hay lecturas de glucosa alrededor de esta comida, así que el impacto se estimó solo por sus ` +
+        `${macros.carbsGrams}g de carbohidratos y ${macros.sugarGrams}g de azúcar. ` +
+        `Subí el CSV del sensor que cubra este horario para ver tu respuesta real.`,
+    };
+  }
 
+  const preReading = before[before.length - 1].value;
+  const peakReading = Math.max(...after.map((r) => r.value));
   const delta = peakReading - preReading;
   const causedSpike = delta >= 35 || peakReading > 140;
 
-  let impactLevel: 'low' | 'medium' | 'high' = 'low';
-  let adviceNextMeal = "";
+  let impactLevel: 'low' | 'medium' | 'high';
+  let adviceNextMeal: string;
 
-  if (causedSpike || macros.sugarGrams > 15 || delta >= 45) {
+  if (causedSpike) {
     impactLevel = 'high';
-    adviceNextMeal = `⚠️ "${dishName}" provocó un pico de +${delta} mg/dL (máx ${peakReading} mg/dL) por sus ${macros.sugarGrams}g de azúcar y ${macros.carbsGrams}g de carbohidratos. Para tu próxima comida: consume vegetales de hoja verde antes de comer, agrega grasas saludables (palta/oliva) o camina 15 minutos.`;
+    adviceNextMeal = `⚠️ "${dishName}" provocó un pico de +${delta} mg/dL (máx ${peakReading} mg/dL) con ${macros.carbsGrams}g de carbohidratos y ${macros.sugarGrams}g de azúcar. Para la próxima: empezá por vegetales o proteína, sumá fibra o grasas saludables, o caminá 10-15 minutos después de comer.`;
   } else if (delta >= 20 || peakReading > 125) {
     impactLevel = 'medium';
-    adviceNextMeal = `🟡 Respuesta moderada (+${delta} mg/dL). Para la siguiente comida, acompaña los carbohidratos con una fuente magra de proteína o fibra.`;
+    adviceNextMeal = `🟡 Respuesta moderada (+${delta} mg/dL). Para la siguiente comida, acompañá los carbohidratos con proteína magra o fibra.`;
   } else {
     impactLevel = 'low';
-    adviceNextMeal = `🟢 Respuesta óptima a "${dishName}" (curva estable con variación de solo +${delta} mg/dL). Puedes mantener una combinación similar.`;
+    adviceNextMeal = `🟢 Respuesta estable a "${dishName}" (variación de solo +${delta} mg/dL). Podés mantener una combinación similar.`;
   }
 
-  return {
-    preMealGlucose: preReading,
-    postMealPeak: peakReading,
-    delta,
-    causedSpike,
-    impactLevel,
-    adviceNextMeal,
-  };
+  return { preMealGlucose: preReading, postMealPeak: peakReading, delta, causedSpike, impactLevel, adviceNextMeal };
 }

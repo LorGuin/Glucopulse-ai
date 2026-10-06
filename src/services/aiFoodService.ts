@@ -3,6 +3,20 @@ import { auth, db } from "./firebase";
 import type { MealRecord } from "../types/meal";
 import { correlateMealWithGlucose } from "../utils/mealGlucoseCorrelator";
 import type { GlucoseReading } from "../utils/glucoseAnalyzer";
+import { callGemini } from "./aiClient";
+
+interface GeminiMeal {
+  dishName: string;
+  ingredients: string[];
+  calories: number;
+  carbsGrams: number;
+  sugarGrams: number;
+  fatsGrams: number;
+  proteinGrams: number;
+  fiberGrams?: number;
+  estimatedGlycemicIndex?: "bajo" | "medio" | "alto";
+  confidence?: "baja" | "media" | "alta";
+}
 
 export async function analyzeMealImage(
   base64Image: string,
@@ -12,39 +26,8 @@ export async function analyzeMealImage(
   const user = auth.currentUser;
   if (!user) throw new Error("Usuario no autenticado");
 
-  const prompt = `Actúa como un médico endocrinólogo y nutricionista experto en metabolismo y diabetes.
-Analiza la comida presente en la fotografía.
-Devuelve EXCLUSIVAMENTE un objeto JSON válido con los valores numéricos y nombres calculados:
-{
-  "dishName": "Nombre descriptivo del plato",
-  "ingredients": ["ingrediente 1", "ingrediente 2"],
-  "calories": 650,
-  "fatsGrams": 32,
-  "carbsGrams": 58,
-  "sugarGrams": 4,
-  "proteinGrams": 35
-}`;
-
-  // Llama a nuestra propia función serverless (api/groq-vision.ts), mandando
-  // la imagen completa (con su prefijo data:image/xxx;base64,...) tal cual
-  // salió del canvas en MealCaptureModal.ts. La clave de Groq nunca viaja
-  // al navegador y no hay problema de CORS porque el request queda dentro
-  // del mismo origen.
-  const response = await fetch("/api/groq-vision", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ imageDataUrl: base64Image, prompt }),
-  });
-
-  const resultData = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    throw new Error(resultData.error || `Error en el servidor (${response.status})`);
-  }
-
-  const rawText: string = resultData.text || "{}";
-  const cleanJson = rawText.replace(/```(?:json)?\n?/g, "").trim();
-  const parsed = JSON.parse(cleanJson);
+  // Gemini (vía /api/gemini) analiza la foto y devuelve JSON con esquema fijo.
+  const { data: parsed } = await callGemini<{ data: GeminiMeal }>("meal", { imageDataUrl: base64Image });
 
   const macros = {
     calories: Math.round(Number(parsed.calories) || 0),
@@ -55,7 +38,7 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido con los valores numéricos y nomb
   };
 
   const dishName = parsed.dishName || "Comida Registrada";
-  const ingredients = parsed.ingredients || [];
+  const ingredients = Array.isArray(parsed.ingredients) ? parsed.ingredients : [];
 
   const safeCGM = Array.isArray(cgmData) ? cgmData : [];
   const correlation = correlateMealWithGlucose(eatenAt, safeCGM, macros, dishName);
@@ -73,6 +56,8 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido con los valores numéricos y nomb
     glucoseDelta: correlation.delta,
     causedSpike: correlation.causedSpike,
     aiAdviceNextMeal: correlation.adviceNextMeal,
+    ...(parsed.estimatedGlycemicIndex ? { estimatedGlycemicIndex: parsed.estimatedGlycemicIndex } : {}),
+    ...(parsed.confidence ? { aiConfidence: parsed.confidence } : {}),
   };
 
   const mealsRef = collection(db, "users", user.uid, "meals");

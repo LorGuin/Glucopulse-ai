@@ -743,3 +743,60 @@ button, input, select { font-family: inherit; }
 
   &:hover { opacity: 1; }
 }
+
+// ---------------------------------------------
+// Análisis con IA (Gemini)
+// ---------------------------------------------
+.insights {
+  h4 { margin: 1.1rem 0 0.5rem; font-size: 0.95rem; }
+  ul { padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.88rem; }
+
+  &__chart { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  &__loading, &__error { font-size: 0.9rem; color: $color-text-muted; }
+  &__error { color: $color-danger; }
+
+  &__summary {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    p { font-size: 0.92rem; line-height: 1.45; }
+  }
+
+  &__score {
+    flex-shrink: 0;
+    width: 74px;
+    height: 74px;
+    border-radius: 50%;
+    border: 3px solid var(--score-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    strong { font-size: 1.4rem; color: var(--score-color); font-family: $font-heading; }
+    span { font-size: 0.6rem; color: $color-text-muted; }
+  }
+
+  &__alerts {
+    margin-top: 1rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: $radius-sm;
+    background: rgba($color-danger, 0.1);
+    border: 1px solid rgba($color-danger, 0.35);
+  }
+
+  &__patterns { display: grid; gap: 0.6rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+  &__pattern {
+    background: $color-surface-alt;
+    border-radius: $radius-sm;
+    padding: 0.7rem 0.8rem;
+    border-left: 3px solid $color-primary;
+    strong { font-size: 0.88rem; }
+    p { font-size: 0.83rem; color: $color-text-muted; margin-top: 0.3rem; line-height: 1.4; }
+
+    &--positivo { border-left-color: $color-success; }
+    &--atencion { border-left-color: $color-warning; }
+  }
+
+  &__disclaimer { margin-top: 1rem; font-size: 0.72rem; color: $color-text-muted; }
+}

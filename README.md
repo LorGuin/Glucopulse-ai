@@ -4,8 +4,8 @@ Monitoreo de glucosa + registro de comidas por foto con IA. Cruza tus
 lecturas de un sensor CGM con fotos de tus platos para detectar qué
 alimentos te disparan picos de glucosa.
 
-**Stack:** TypeScript · Vite · Sass · Firebase (Auth + Firestore) · Groq
-(IA de visión y chat) vía funciones serverless de Vercel.
+**Stack:** TypeScript · Vite · Sass · Firebase (Auth + Firestore) · Gemini
+(fotos de platos, chat y análisis de datos) vía funciones serverless de Vercel o Netlify.
 
 ## 1. Instalar dependencias
 
@@ -26,19 +26,27 @@ cp .env.example .env
 4. Completá las variables `VITE_FIREBASE_*` con los datos de tu proyecto
    (Configuración del proyecto → tus apps → SDK config).
 
-## 3. Configurar Groq (IA)
+## 3. Configurar Gemini (IA)
 
-1. Creá una cuenta gratis en https://console.groq.com/keys (sin tarjeta).
-2. Generá una API key.
-3. En el mismo `.env`, completá:
+1. Generá una API key en https://aistudio.google.com/apikey
+2. En el mismo `.env` (y en las variables de entorno de Vercel/Netlify), completá:
 
 ```
-GROQ_API_KEY=gsk_tu_clave_aca
+GEMINI_API_KEY=tu_clave
 ```
 
-   **Importante:** esta variable NO lleva el prefijo `VITE_` a propósito.
-   Así Vite nunca la incluye en el bundle del navegador — solo la leen las
-   funciones serverless en `api/`.
+   **Importante:** NO lleva el prefijo `VITE_`, así Vite nunca la incluye en el
+   bundle del navegador. Solo la usa `server/gemini.ts`.
+
+   Toda la IA pasa por un único endpoint `/api/gemini` (Vercel: `api/gemini.ts`,
+   Netlify: `netlify/functions/gemini.ts`, ambos usan `server/gemini.ts`). El
+   endpoint exige el token de sesión de Firebase, así que solo usuarios logueados
+   pueden consumir tu cuota. Acciones:
+
+   - `meal`: analiza la foto de un plato (JSON con macros).
+   - `chat`: asistente con el contexto real de glucosa + comidas.
+   - `analyze`: análisis completo (patrones, comidas problemáticas, recomendaciones)
+     a partir de un resumen compacto que arma `src/utils/glucoseSummary.ts`.
 
 ## 4. Correr en desarrollo
 

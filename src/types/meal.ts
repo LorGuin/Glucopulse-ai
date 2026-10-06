@@ -16,9 +16,12 @@ export interface MealRecord {
   macros: MacroNutrients;
   ingredients: string[];
   glycemicImpact: GlycemicImpact;
-  preMealGlucose: number;
-  postMealPeak: number;
-  glucoseDelta: number;
+  // null cuando no había lecturas de glucosa alrededor de la comida
+  preMealGlucose: number | null;
+  postMealPeak: number | null;
+  glucoseDelta: number | null;
   causedSpike: boolean;
   aiAdviceNextMeal: string;
+  estimatedGlycemicIndex?: "bajo" | "medio" | "alto";
+  aiConfidence?: "baja" | "media" | "alta";
 }

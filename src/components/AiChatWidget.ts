@@ -2,14 +2,17 @@ import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { auth, db } from "../services/firebase";
 import type { GlucoseReading } from "../utils/glucoseAnalyzer";
 import type { MealRecord } from "../types/meal";
+import { buildDataSummary } from "../utils/glucoseSummary";
+import { callGemini } from "../services/aiClient";
 
 export class AiChatWidget {
   private targetParent: HTMLElement;
-  private cgmData: GlucoseReading[];
+  private getReadings: () => GlucoseReading[];
+  private history: { role: "user" | "ai"; text: string }[] = [];
 
-  constructor(targetParent: HTMLElement, cgmData: GlucoseReading[] = []) {
+  constructor(targetParent: HTMLElement, getReadings: () => GlucoseReading[]) {
     this.targetParent = targetParent;
-    this.cgmData = cgmData;
+    this.getReadings = getReadings;
   }
 
   public render(): void {
@@ -27,7 +30,7 @@ export class AiChatWidget {
         <div class="chat-window__header">
           <div>
             <strong>Asistente Metabólico IA</strong>
-            <span id="chat-quota-label" class="quota-badge">Online</span>
+            <span id="chat-quota-label" class="quota-badge">Gemini</span>
           </div>
           <button id="close-chat-btn" class="btn-close-chat" type="button">&times;</button>
         </div>
@@ -39,7 +42,7 @@ export class AiChatWidget {
         </div>
 
         <div id="chat-messages" class="chat-messages">
-          <div class="msg ai">¡Hola! Soy tu asistente médico de GlucoPulse. He cruzado tus lecturas de glucosa con tus fotos de comidas. ¿Qué deseas consultar?</div>
+          <div class="msg ai">¡Hola! Soy el asistente de GlucoPulse. Puedo responder sobre tus lecturas de glucosa y tus comidas registradas. No reemplazo a tu médico.</div>
         </div>
 
         <form id="chat-form" class="chat-input-row">
@@ -53,26 +56,16 @@ export class AiChatWidget {
     this.initEvents(widget);
   }
 
-  private buildMetabolicContext(recentMeals: MealRecord[]): string {
-    const latestGlucose = this.cgmData.length > 0 ? this.cgmData[this.cgmData.length - 1].value : 105;
-
-    let mealsSummary = "Sin registros recientes de comida.";
-    if (recentMeals.length > 0) {
-      mealsSummary = recentMeals
-        .map(
-          (m) =>
-            `- Plato: ${m.dishName} | ${m.macros?.calories || 0} kcal, ${m.macros?.carbsGrams || 0}g carbs, ${m.macros?.sugarGrams || 0}g azúcar | Hora: ${new Date(m.eatenAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-        )
-        .join("\n");
-    }
-
-    return `Eres un médico endocrinólogo y nutricionista clínico de GlucoPulse AI.
-Datos del paciente en tiempo real:
-- Glucosa actual en sangre: ${latestGlucose} mg/dL.
-- Comidas registradas hoy con foto y macros:
-${mealsSummary}
-
-Instrucciones: Responde de forma empática, personalizada, clara y concisa (máximo 2 párrafos).`;
+  // Contexto con datos REALES y actuales (se arma en cada pregunta, así
+  // incluye mediciones o CSV cargados después de abrir el dashboard).
+  private buildContext(recentMeals: MealRecord[]) {
+    const readings = this.getReadings();
+    const latest = readings.length > 0 ? readings[readings.length - 1] : null;
+    return {
+      glucosa_actual: latest ? { valor: latest.value, fecha: latest.date.toLocaleString() } : null,
+      fecha_hoy: new Date().toLocaleString(),
+      ...buildDataSummary(readings, recentMeals),
+    };
   }
 
   private initEvents(widget: HTMLElement): void {
@@ -110,7 +103,7 @@ Instrucciones: Responde de forma empática, personalizada, clara y concisa (máx
       if (user) {
         try {
           const mealsRef = collection(db, "users", user.uid, "meals");
-          const q = query(mealsRef, orderBy("createdAt", "desc"), limit(3));
+          const q = query(mealsRef, orderBy("createdAt", "desc"), limit(10));
           const snap = await getDocs(q);
           recentMeals = snap.docs.map((d) => d.data() as MealRecord);
         } catch (err) {
@@ -118,11 +111,13 @@ Instrucciones: Responde de forma empática, personalizada, clara y concisa (máx
         }
       }
 
-      const systemPrompt = this.buildMetabolicContext(recentMeals);
+      const context = this.buildContext(recentMeals);
 
       try {
-        const aiAnswer = await this.askAI(text, systemPrompt);
+        const aiAnswer = await this.askAI(text, context);
         this.appendMessage(messages, aiAnswer, "ai");
+        this.history.push({ role: "user", text }, { role: "ai", text: aiAnswer });
+        this.history = this.history.slice(-10);
       } catch (err: any) {
         this.appendMessage(messages, `❌ Error de IA: ${err.message || "No se pudo obtener respuesta."}`, "ai");
       } finally {
@@ -140,20 +135,15 @@ Instrucciones: Responde de forma empática, personalizada, clara y concisa (máx
     container.scrollTop = container.scrollHeight;
   }
 
-  private async askAI(userQuery: string, systemPrompt: string): Promise<string> {
-    // Llama a nuestra propia función serverless (api/groq-chat.ts).
-    const response = await fetch("/api/groq-chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userQuery, systemPrompt }),
+  private async askAI(message: string, context: unknown): Promise<string> {
+    const data = await callGemini<{ text: string; proveedor?: string }>("chat", {
+      message,
+      context,
+      history: this.history,
     });
-
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      throw new Error(data.error || `Error en el servidor (${response.status})`);
-    }
-
+    // Muestra en el encabezado del chat qué modelo respondió.
+    const badge = document.getElementById("chat-quota-label");
+    if (badge && data.proveedor) badge.textContent = data.proveedor.startsWith("groq") ? "Groq (respaldo)" : data.proveedor;
     return data.text || "No se obtuvo respuesta del modelo.";
   }
 }

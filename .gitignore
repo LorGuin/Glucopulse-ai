@@ -11,3 +11,9 @@ dist-ssr
 *.tsbuildinfo
 
 .vercel
+
+# Local Netlify folder
+.netlify
+
+# Generado por netlify dev
+deno.lock
