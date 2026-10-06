@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, query, orderBy, limit, documentId, writeBatch } from "firebase/firestore";
+import { collection, doc, getDocs, writeBatch } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import type { GlucoseReading } from "../utils/glucoseAnalyzer";
 
@@ -44,11 +44,13 @@ export async function loadCgmReadings(maxDays = DAYS_TO_LOAD): Promise<GlucoseRe
   const user = auth.currentUser;
   if (!user) return [];
 
-  const ref = collection(db, "users", user.uid, "cgm_days");
-  const snap = await getDocs(query(ref, orderBy(documentId(), "desc"), limit(maxDays)));
+  // Traemos todos los días (1 documento chico por día) y ordenamos acá:
+  // ordenar en Firestore por ID descendente exige crear un índice aparte.
+  const snap = await getDocs(collection(db, "users", user.uid, "cgm_days"));
+  const lastDays = snap.docs.sort((a, b) => b.id.localeCompare(a.id)).slice(0, maxDays);
 
   const readings: GlucoseReading[] = [];
-  snap.forEach((d) => {
+  lastDays.forEach((d) => {
     const r = (d.data().r ?? {}) as Record<string, number>;
     for (const [ts, value] of Object.entries(r)) {
       readings.push({ date: new Date(Number(ts)), value: Number(value) });
