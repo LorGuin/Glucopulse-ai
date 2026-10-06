@@ -138,8 +138,10 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
       const saved = await loadCgmReadings();
       csvReadings = mergeReadings(saved, csvReadings);
       if (saved.length > 0) csvStatus = "";
-    } catch (err) {
+    } catch (err: any) {
       console.warn("No se pudieron cargar las lecturas guardadas del sensor:", err);
+      // Lo mostramos en pantalla (en el celular no se ve la consola).
+      csvStatus = `❌ No se pudieron cargar tus lecturas guardadas: ${err.code || err.message}`;
     }
     render();
     checkForEmergency();
