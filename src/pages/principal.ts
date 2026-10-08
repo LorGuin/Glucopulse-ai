@@ -20,6 +20,9 @@ import { buildDataSummary } from "../utils/glucoseSummary";
 import { callGemini } from "../services/aiClient";
 import { escapeHtml } from "../utils/escapeHtml";
 import { saveCgmReadings, loadCgmReadings, mergeReadings } from "../services/cgmService";
+import { reportSensorData, trackCsvUpload, trackError } from "../services/telemetryService";
+import { FeedbackModal } from "../components/FeedbackModal";
+import { isAdminEmail } from "./admin";
 
 export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLElement {
   const container = document.createElement("div");
@@ -127,6 +130,7 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
       }));
     } catch (err) {
       console.warn("No se pudieron cargar las mediciones manuales:", err);
+      trackError("carga_manuales", err);
     }
     render();
     checkForEmergency();
@@ -138,8 +142,10 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
       const saved = await loadCgmReadings();
       csvReadings = mergeReadings(saved, csvReadings);
       if (saved.length > 0) csvStatus = "";
+      reportSensorData(csvReadings.at(-1)?.date ?? null, csvReadings.length);
     } catch (err: any) {
       console.warn("No se pudieron cargar las lecturas guardadas del sensor:", err);
+      trackError("carga_lecturas", err);
       // Lo mostramos en pantalla (en el celular no se ve la consola).
       csvStatus = `❌ No se pudieron cargar tus lecturas guardadas: ${err.code || err.message}`;
     }
@@ -153,6 +159,7 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
       const content = e.target?.result as string;
       const parsed = parseCGMFile(content);
       if (parsed.length === 0) {
+        trackError("csv_formato", new Error(`El archivo "${file.name}" no tiene lecturas válidas`));
         alert("No se encontraron lecturas válidas en el archivo. Revisá que sea el CSV exportado del sensor.");
         return;
       }
@@ -161,13 +168,18 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
       csvStatus = `Guardando ${parsed.length} lecturas en la nube…`;
       render();
 
+      const sorted = [...parsed].sort((a, b) => a.date.getTime() - b.date.getTime());
       try {
         const days = await saveCgmReadings(parsed);
         csvStatus = `✅ ${parsed.length} lecturas guardadas (${days} días)`;
+        trackCsvUpload({ readings: parsed.length, days, from: sorted[0].date, to: sorted[sorted.length - 1].date, ok: true });
       } catch (err: any) {
         console.error("❌ Error al guardar lecturas del sensor:", err);
         csvStatus = `❌ No se pudieron guardar las lecturas: ${err.message || err.code}`;
+        trackCsvUpload({ readings: parsed.length, days: 0, from: sorted[0].date, to: sorted[sorted.length - 1].date, ok: false });
+        trackError("csv_guardado", err);
       }
+      reportSensorData(csvReadings.at(-1)?.date ?? null, csvReadings.length);
 
       // Resumen del archivo (solo estadísticas, sin las miles de lecturas:
       // antes se guardaban todas en un único documento y superaba el límite
@@ -251,6 +263,8 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
             <span class="dashboard-header__user">${auth.currentUser?.email || "Usuario"}</span>
           </div>
           <div class="dashboard-header__actions">
+            ${isAdminEmail(auth.currentUser?.email) ? `<button id="admin-btn" class="dashboard-header__settings" title="Monitoreo de testers">📋</button>` : ""}
+            <button id="feedback-btn" class="dashboard-header__settings" title="Contanos cómo te funciona la app">💬</button>
             <button id="emergency-settings-btn" class="dashboard-header__settings" title="Contactos de emergencia">⚙️</button>
             <button id="logout-btn" class="dashboard-header__logout">
               <span>Cerrar Sesión</span>
@@ -366,6 +380,14 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
 
     container.querySelector("#emergency-settings-btn")?.addEventListener("click", () => {
       openContactsModal();
+    });
+
+    container.querySelector("#feedback-btn")?.addEventListener("click", () => {
+      new FeedbackModal(document.body).render();
+    });
+
+    container.querySelector("#admin-btn")?.addEventListener("click", () => {
+      params?.goTo("/admin");
     });
 
     const fileInput = container.querySelector("#cgm-file-input") as HTMLInputElement;

@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// Reglas de Firestore de GlucoPulse AI.
+// Pegalas en: Firebase Console > Firestore Database > Reglas > Publicar.
+//
+// ⚠️ Antes de publicar, compará con las reglas que ya tenés en la consola:
+// si tenías reglas extra que no están acá, sumalas. Y revisá
+// el mail de administrador si lo cambiás (tiene que coincidir con VITE_ADMIN_EMAILS).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.email in [
+        'cristianminni@gmail.com'
+      ];
+    }
+
+    // Datos de cada usuario (lecturas, comidas, contactos, historial)
+    match /users/{uid}/{document=**} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Resúmenes de CSV subidos (lo escribe principal.ts)
+    match /cgm_analyses/{id} {
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if signedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // ---- Monitoreo de testers ----
+    // Resumen por usuario: cada uno escribe solo el suyo; el admin los lee todos.
+    match /testers/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      allow create, update: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Eventos: cada usuario solo puede crear los suyos; solo el admin los lee.
+    match /telemetry_events/{id} {
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow read: if isAdmin();
+    }
+  }
+}

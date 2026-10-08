@@ -1,4 +1,5 @@
 import { auth } from "./firebase";
+import { trackAiResponse, trackError } from "./telemetryService";
 
 // Único punto de entrada del frontend a la IA. Llama a nuestra función
 // serverless /api/gemini (Vercel: api/gemini.ts · Netlify: netlify/functions/gemini.ts)
@@ -6,6 +7,17 @@ import { auth } from "./firebase";
 export type GeminiAction = "meal" | "chat" | "analyze";
 
 export async function callGemini<T = any>(action: GeminiAction, payload: Record<string, unknown>): Promise<T> {
+  try {
+    const data = await requestGemini<T>(action, payload);
+    trackAiResponse(action, (data as any)?.proveedor);
+    return data;
+  } catch (err) {
+    trackError(`ia_${action}`, err);
+    throw err;
+  }
+}
+
+async function requestGemini<T>(action: GeminiAction, payload: Record<string, unknown>): Promise<T> {
   const user = auth.currentUser;
   if (!user) throw new Error("Usuario no autenticado");
   const idToken = await user.getIdToken();
