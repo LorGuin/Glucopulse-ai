@@ -176,7 +176,9 @@ export function trackCsvUpload(info: { readings: number; days: number; from: Dat
 
 /** Algo falló. `area` dice dónde: "csv", "ia_meal", "ia_chat", "carga_lecturas", etc. */
 export function trackError(area: string, err: unknown): void {
-  const info = errorInfo(err);
+  // Guardamos el dispositivo EN el error: el resumen del tester solo muestra
+  // el último dispositivo usado, que puede no ser donde falló.
+  const info = { ...errorInfo(err), device: shortDevice() };
   updateTester({
     lastError: { area, ...info, at: new Date() },
     counters: { errors: increment(1) },

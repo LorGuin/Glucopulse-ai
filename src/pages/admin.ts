@@ -24,7 +24,7 @@ interface TesterRow {
   lastAiProvider?: string;
   totalReadings?: number;
   counters: { sessions?: number; csvUploads?: number; aiCalls?: number; aiFallbacks?: number; errors?: number };
-  lastError?: { area?: string; message?: string; at?: Date };
+  lastError?: { area?: string; message?: string; device?: string; at?: Date };
   lastFeedback?: { ok?: boolean; comment?: string; at?: Date };
   errors24h: number;
   estado: Estado;
@@ -155,7 +155,7 @@ function renderTesters(testers: TesterRow[]): string {
           <div><dt>Errores</dt><dd>${t.errors24h} en 24 h · ${c.errors ?? 0} en total</dd></div>
           <div><dt>Primera vez</dt><dd>${hace(t.firstSeen)}</dd></div>
         </dl>
-        ${t.lastError ? `<p class="admin-error">Último error (${escapeHtml(t.lastError.area ?? "")}, ${hace(t.lastError.at)}): ${escapeHtml(t.lastError.message ?? "")}</p>` : ""}
+        ${t.lastError ? `<p class="admin-error">Último error (${escapeHtml(t.lastError.area ?? "")}, ${hace(t.lastError.at)}${t.lastError.device ? `, ${escapeHtml(t.lastError.device)}` : ""}): ${escapeHtml(t.lastError.message ?? "")}</p>` : ""}
         ${t.lastFeedback ? `<p class="admin-feedback">${t.lastFeedback.ok ? "👍" : "👎"} ${escapeHtml(t.lastFeedback.comment || "(sin comentario)")} <span class="admin-muted">${hace(t.lastFeedback.at)}</span></p>` : ""}
       </article>`;
     })
@@ -173,7 +173,7 @@ function describeEvent(e: EventRow): string {
   const d = e.detail;
   switch (e.type) {
     case "error":
-      return `${escapeHtml(d.area ?? "")}: ${escapeHtml(d.message ?? "")}`;
+      return `${escapeHtml(d.area ?? "")}: ${escapeHtml(d.message ?? "")}${d.device ? ` <span class="admin-muted">(${escapeHtml(d.device)})</span>` : ""}`;
     case "feedback":
       return `${d.ok ? "👍" : "👎"} ${escapeHtml(d.comment || "(sin comentario)")}`;
     case "csv_upload":

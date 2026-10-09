@@ -22,7 +22,7 @@ async function requestGemini<T>(action: GeminiAction, payload: Record<string, un
   if (!user) throw new Error("Usuario no autenticado");
   const idToken = await user.getIdToken();
 
-  const response = await fetch("/api/gemini", {
+  const response = await postWithRetry("/api/gemini", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -48,4 +48,26 @@ async function requestGemini<T>(action: GeminiAction, payload: Record<string, un
   }
   if (data?.proveedor) console.info(`[IA] ${action} respondido por ${data.proveedor}`);
   return data as T;
+}
+
+// fetch() solo lanza excepción cuando la conexión se corta (sin respuesta del
+// servidor): Safari dice "Load failed", Chrome "Failed to fetch". En ese caso
+// reintentamos UNA vez tras una pausa corta; si vuelve a fallar, mostramos un
+// mensaje entendible. Los errores con respuesta (4xx/5xx) no se reintentan.
+const NETWORK_ERROR_MSG =
+  "Se cortó la conexión con el servidor. Revisá tu internet y probá de nuevo " +
+  "(no cierres ni minimices la app mientras analiza).";
+
+async function postWithRetry(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch {
+    await new Promise((r) => setTimeout(r, 1500));
+    try {
+      return await fetch(url, init);
+    } catch (err) {
+      const original = (err as Error)?.message || String(err);
+      throw Object.assign(new Error(NETWORK_ERROR_MSG), { code: `red: ${original}` });
+    }
+  }
 }
