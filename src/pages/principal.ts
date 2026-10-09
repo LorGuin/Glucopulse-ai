@@ -264,16 +264,25 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
             <h1 class="dashboard-header__title">GlucoPulse AI</h1>
             <span class="dashboard-header__user">${auth.currentUser?.email || "Usuario"}</span>
           </div>
-          <div class="dashboard-header__actions">
-            ${isAdminEmail(auth.currentUser?.email) ? `<button id="admin-btn" class="dashboard-header__settings" title="Monitoreo de testers">📋</button>` : ""}
-            ${installButtonHtml("dashboard-header__settings pwa-install-btn--header")}
-            <button type="button" class="dashboard-header__settings" data-open-howto title="Ver cómo funciona la app (video de 1 minuto)" aria-label="Ver cómo funciona la app">❔</button>
-            <button id="feedback-btn" class="dashboard-header__settings" title="Contanos cómo te funciona la app">💬</button>
-            <button id="emergency-settings-btn" class="dashboard-header__settings" title="Contactos de emergencia">⚙️</button>
-            <button id="logout-btn" class="dashboard-header__logout" aria-label="Cerrar sesión" title="Cerrar sesión">
-              <span class="dashboard-header__logout-label">Cerrar Sesión</span>
-              <span class="logout-icon">↪</span>
+          <div class="user-menu">
+            <button type="button" class="user-menu__trigger" id="user-menu-btn"
+              aria-haspopup="menu" aria-expanded="false" aria-controls="user-menu-list" aria-label="Abrir menú">
+              <span class="user-menu__avatar" aria-hidden="true">${escapeHtml((auth.currentUser?.email || "U").charAt(0).toUpperCase())}</span>
+              <span class="user-menu__bars" aria-hidden="true"><i></i><i></i><i></i></span>
             </button>
+            <div class="user-menu__panel" id="user-menu-list" role="menu" aria-label="Menú" hidden>
+              <div class="user-menu__who">
+                <span class="user-menu__who-label">Sesión iniciada como</span>
+                <span class="user-menu__who-email">${escapeHtml(auth.currentUser?.email || "Usuario")}</span>
+              </div>
+              ${installButtonHtml("user-menu__item user-menu__item--accent")}
+              <button type="button" class="user-menu__item" role="menuitem" data-open-howto><span class="user-menu__ico" aria-hidden="true">▶</span>Cómo funciona la app</button>
+              <button type="button" class="user-menu__item" role="menuitem" id="feedback-btn"><span class="user-menu__ico" aria-hidden="true">💬</span>Contanos cómo te funciona</button>
+              <button type="button" class="user-menu__item" role="menuitem" id="emergency-settings-btn"><span class="user-menu__ico" aria-hidden="true">🆘</span>Contactos de emergencia</button>
+              ${isAdminEmail(auth.currentUser?.email) ? `<button type="button" class="user-menu__item" role="menuitem" id="admin-btn"><span class="user-menu__ico" aria-hidden="true">📋</span>Panel de testers</button>` : ""}
+              <div class="user-menu__sep" role="separator"></div>
+              <button type="button" class="user-menu__item user-menu__item--danger" role="menuitem" id="logout-btn"><span class="user-menu__ico" aria-hidden="true">↪</span>Cerrar sesión</button>
+            </div>
           </div>
         </header>
 
@@ -375,6 +384,7 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
   };
 
   const attachEvents = () => {
+    bindUserMenu(container);
     bindHowItWorksButtons(container);
     bindInstallButtons(container);
     bindWelcomeCard(container, () => render());
@@ -494,4 +504,47 @@ async function saveCGMAnalysis(stats: PeriodStats, name: string): Promise<string
   });
 
   return docRef.id;
+}
+
+// Menú del usuario (arriba a la derecha): abre/cierra, se cierra con Esc,
+// tocando afuera o al elegir una opción, y se maneja con las flechas.
+function bindUserMenu(root: HTMLElement): void {
+  const trigger = root.querySelector<HTMLButtonElement>("#user-menu-btn");
+  const panel = root.querySelector<HTMLElement>("#user-menu-list");
+  if (!trigger || !panel) return;
+
+  const items = () => [...panel.querySelectorAll<HTMLButtonElement>("button")];
+
+  const close = (focusTrigger = false) => {
+    panel.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+    document.removeEventListener("pointerdown", onOutside, true);
+    document.removeEventListener("keydown", onKey);
+    if (focusTrigger) trigger.focus();
+  };
+  const open = () => {
+    panel.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+    document.addEventListener("pointerdown", onOutside, true);
+    document.addEventListener("keydown", onKey);
+    items()[0]?.focus();
+  };
+  const onOutside = (e: Event) => {
+    if (!root.isConnected || !panel.contains(e.target as Node) && !trigger.contains(e.target as Node)) close();
+  };
+  const onKey = (e: KeyboardEvent) => {
+    if (!root.isConnected) return close();
+    const list = items();
+    const i = list.indexOf(document.activeElement as HTMLButtonElement);
+    if (e.key === "Escape") { e.preventDefault(); close(true); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); list[(i + 1) % list.length]?.focus(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); list[(i - 1 + list.length) % list.length]?.focus(); }
+    else if (e.key === "Tab") close();
+  };
+
+  trigger.addEventListener("click", () => (panel.hidden ? open() : close()));
+  // Elegir una opción cierra el menú (cada botón ya tiene su propia acción).
+  panel.addEventListener("click", (e) => {
+    if ((e.target as HTMLElement).closest("button")) close();
+  });
 }

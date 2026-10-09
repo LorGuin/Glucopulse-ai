@@ -103,7 +103,7 @@ function showIosInstructions(): void {
 /** Botón listo para insertar en un template (vacío si no corresponde). */
 export function installButtonHtml(className = "pwa-install-btn"): string {
   if (!canOfferInstall()) return "";
-  return `<button type="button" class="${className}" data-pwa-install aria-label="Instalar app" title="Instalar app"><span aria-hidden="true">📲</span><span class="pwa-install-btn__label"> Instalar app</span></button>`;
+  return `<button type="button" class="${className}" data-pwa-install aria-label="Instalar app" title="Instalar app"><span class="user-menu__ico" aria-hidden="true">📲</span><span class="pwa-install-btn__label"> Instalar app</span></button>`;
 }
 
 export function bindInstallButtons(root: ParentNode): void {
