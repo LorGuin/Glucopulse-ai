@@ -4,6 +4,9 @@ import { initInicio } from "./pages/inicio";
 import { initPrincipal } from "./pages/principal";
 import { initAdmin } from "./pages/admin";
 import { startTelemetrySession, stopTelemetrySession } from "./services/telemetryService";
+import { initPwa } from "./services/pwaInstall";
+
+initPwa();
 import "./styles/main.scss";
 
 const root = document.querySelector<HTMLDivElement>(".root");

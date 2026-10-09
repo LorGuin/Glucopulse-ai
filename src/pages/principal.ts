@@ -24,6 +24,7 @@ import { reportSensorData, trackCsvUpload, trackError } from "../services/teleme
 import { FeedbackModal } from "../components/FeedbackModal";
 import { isAdminEmail } from "./admin";
 import { welcomeCardHtml, bindWelcomeCard, bindHowItWorksButtons } from "../components/HowItWorksVideo";
+import { installButtonHtml, bindInstallButtons, onInstallAvailabilityChange } from "../services/pwaInstall";
 
 export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLElement {
   const container = document.createElement("div");
@@ -265,6 +266,7 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
           </div>
           <div class="dashboard-header__actions">
             ${isAdminEmail(auth.currentUser?.email) ? `<button id="admin-btn" class="dashboard-header__settings" title="Monitoreo de testers">📋</button>` : ""}
+            ${installButtonHtml("dashboard-header__settings pwa-install-btn--header")}
             <button type="button" class="dashboard-header__settings" data-open-howto title="Ver cómo funciona la app (video de 1 minuto)" aria-label="Ver cómo funciona la app">❔</button>
             <button id="feedback-btn" class="dashboard-header__settings" title="Contanos cómo te funciona la app">💬</button>
             <button id="emergency-settings-btn" class="dashboard-header__settings" title="Contactos de emergencia">⚙️</button>
@@ -374,6 +376,7 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
 
   const attachEvents = () => {
     bindHowItWorksButtons(container);
+    bindInstallButtons(container);
     bindWelcomeCard(container, () => render());
 
     container.querySelector("#logout-btn")?.addEventListener("click", async () => {
@@ -442,6 +445,16 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
 
   // 1. Dibujar la vista inicial
   render();
+  const offInstall = onInstallAvailabilityChange(() => {
+    if (!container.isConnected) return offInstall();
+    render();
+  });
+
+  // Atajo del ícono de la app instalada ("Registrar plato"): abre la cámara.
+  if (new URLSearchParams(location.search).get("accion") === "plato") {
+    history.replaceState(null, "", location.pathname + location.hash);
+    setTimeout(() => (container.querySelector("#add-meal-fab") as HTMLButtonElement | null)?.click(), 300);
+  }
 
   // 2. Cargar comidas, mediciones manuales y contactos de emergencia
   loadRecentMeals();

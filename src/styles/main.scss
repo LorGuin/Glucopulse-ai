@@ -1225,3 +1225,42 @@ button, input, select { font-family: inherit; }
     &:hover { color: $color-text; }
   }
 }
+
+
+// ---------------------------------------------
+// App instalable (PWA)
+// ---------------------------------------------
+.pwa-install-btn {
+  @include button-base;
+  background: transparent;
+  border: 1px solid rgba($color-primary, 0.6);
+  color: $color-text;
+  padding: 0.7rem 1rem;
+  font-size: 0.92rem;
+  min-height: 44px;
+
+  &--block { width: 100%; margin-top: 0.9rem; }
+}
+
+.pwa-install-btn--header {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.pwa-ios {
+  &__steps {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    line-height: 1.45;
+  }
+
+  &__note { margin: 1rem 0 0; color: $color-text-muted; font-size: 0.88rem; }
+}
+
+// En la app instalada, respetar la muesca/barra del celular.
+@media (display-mode: standalone) {
+  body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+}

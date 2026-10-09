@@ -8,6 +8,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
+import { isInstalled } from "./pwaInstall";
 
 // ---------------------------------------------------------------------------
 // Monitoreo de testers
@@ -59,7 +60,7 @@ function shortDevice(): string {
   const os = /Android/i.test(ua) ? "Android" : /iPhone|iPad/i.test(ua) ? "iOS" : /Windows/i.test(ua) ? "Windows" : /Mac/i.test(ua) ? "Mac" : "Otro";
   const browser = /Edg\//.test(ua) ? "Edge" : /Chrome\//.test(ua) ? "Chrome" : /Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "Otro";
   const mobile = /Mobi/i.test(ua) ? "celular" : "compu";
-  return `${os} · ${browser} · ${mobile}`;
+  return `${os} · ${browser} · ${mobile}${isInstalled() ? " · app instalada" : ""}`;
 }
 
 function errorInfo(err: unknown): { message: string; code?: string } {

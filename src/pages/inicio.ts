@@ -5,6 +5,7 @@ import {
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../services/firebase";
 import { teaserHtml, bindHowItWorksButtons } from "../components/HowItWorksVideo";
+import { installButtonHtml, bindInstallButtons, onInstallAvailabilityChange } from "../services/pwaInstall";
 
 export function initInicio(params?: { goTo: (path: string) => void }): HTMLElement {
   const container = document.createElement("div");
@@ -47,6 +48,8 @@ export function initInicio(params?: { goTo: (path: string) => void }): HTMLEleme
             </button>
           </form>
 
+          ${installButtonHtml("pwa-install-btn pwa-install-btn--block")}
+
           <footer class="auth-card__footer">
             <span>${isRegistering ? '¿Ya tienes una cuenta?' : '¿Aún no tienes cuenta?'}</span>
             <button type="button" class="auth-card__toggle-btn" id="toggle-auth-btn">
@@ -59,6 +62,7 @@ export function initInicio(params?: { goTo: (path: string) => void }): HTMLEleme
     `;
 
     bindHowItWorksButtons(container);
+    bindInstallButtons(container);
     attachEvents();
   };
 
@@ -142,5 +146,15 @@ export function initInicio(params?: { goTo: (path: string) => void }): HTMLEleme
   };
 
   renderContent();
+
+  // Chrome avisa que se puede instalar unos segundos después de cargar:
+  // ahí volvemos a dibujar para que aparezca el botón (si el formulario
+  // está vacío, así no se pierde lo que la persona estaba escribiendo).
+  const off = onInstallAvailabilityChange(() => {
+    if (!container.isConnected) return off();
+    const typing = [...container.querySelectorAll("input")].some((i) => i.value);
+    if (!typing) renderContent();
+  });
+
   return container;
 }
