@@ -1264,3 +1264,28 @@ button, input, select { font-family: inherit; }
 @media (display-mode: standalone) {
   body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
 }
+
+
+// ---------------------------------------------
+// Encabezado del dashboard en pantallas angostas (celular)
+// ---------------------------------------------
+.dashboard-header__title { white-space: nowrap; }
+
+@media (max-width: 560px) {
+  .dashboard-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .dashboard-header__actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.4rem;
+
+    > button { flex: 1 1 0; justify-content: center; min-height: 44px; padding-left: 0.4rem; padding-right: 0.4rem; }
+  }
+
+  // En el celu quedan solo los íconos (los botones tienen aria-label).
+  .dashboard-header__logout-label,
+  .pwa-install-btn--header .pwa-install-btn__label { display: none; }
+}

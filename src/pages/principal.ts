@@ -270,8 +270,8 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
             <button type="button" class="dashboard-header__settings" data-open-howto title="Ver cómo funciona la app (video de 1 minuto)" aria-label="Ver cómo funciona la app">❔</button>
             <button id="feedback-btn" class="dashboard-header__settings" title="Contanos cómo te funciona la app">💬</button>
             <button id="emergency-settings-btn" class="dashboard-header__settings" title="Contactos de emergencia">⚙️</button>
-            <button id="logout-btn" class="dashboard-header__logout">
-              <span>Cerrar Sesión</span>
+            <button id="logout-btn" class="dashboard-header__logout" aria-label="Cerrar sesión" title="Cerrar sesión">
+              <span class="dashboard-header__logout-label">Cerrar Sesión</span>
               <span class="logout-icon">↪</span>
             </button>
           </div>
