@@ -4,6 +4,7 @@ import {
 } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../services/firebase";
+import { teaserHtml, bindHowItWorksButtons } from "../components/HowItWorksVideo";
 
 export function initInicio(params?: { goTo: (path: string) => void }): HTMLElement {
   const container = document.createElement("div");
@@ -53,9 +54,11 @@ export function initInicio(params?: { goTo: (path: string) => void }): HTMLEleme
             </button>
           </footer>
         </div>
+        ${teaserHtml()}
       </div>
     `;
 
+    bindHowItWorksButtons(container);
     attachEvents();
   };
 

@@ -64,8 +64,10 @@ button, input, select { font-family: inherit; }
 .auth-wrapper {
   min-height: 100vh;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
+  gap: 2.5rem;
   padding: 1.5rem;
 }
 
@@ -1065,4 +1067,161 @@ button, input, select { font-family: inherit; }
   &__what { overflow-wrap: anywhere; }
   &__type--error { color: $color-danger; }
   &__type--feedback { color: $color-primary; }
+}
+
+
+// ---------------------------------------------
+// Video "Cómo funciona" (inicio, ventana y bienvenida)
+// ---------------------------------------------
+.howto-teaser {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  max-width: 460px;
+
+  &__phone {
+    flex-shrink: 0;
+    width: 200px;
+    aspect-ratio: 9 / 16;
+    border-radius: 28px;
+    padding: 7px;
+    background: #050608;
+    border: 1px solid $color-border;
+    box-shadow: 0 24px 60px rgba($color-primary, 0.25);
+    overflow: hidden;
+  }
+
+  &__video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 22px;
+    background: $color-surface;
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+
+    strong { font-family: $font-heading; font-size: 1.3rem; line-height: 1.25; }
+    p { margin: 0; color: $color-text-muted; font-size: 0.92rem; line-height: 1.5; }
+  }
+
+  // En el celu va debajo del login, más compacto, para no taparlo.
+  @media (max-width: 760px) {
+    max-width: 380px;
+    width: 100%;
+    gap: 1rem;
+
+    &__phone { width: 120px; border-radius: 20px; padding: 5px; }
+    &__video { border-radius: 16px; }
+    &__text strong { font-size: 1.05rem; }
+    &__text p { font-size: 0.85rem; }
+  }
+}
+
+.howto-btn {
+  @include button-base;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: $color-primary;
+  color: white;
+  padding: 0.7rem 1.1rem;
+  font-size: 0.92rem;
+  min-height: 44px;
+
+  &__dur {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 99px;
+    padding: 0.1rem 0.5rem;
+    font-size: 0.78rem;
+  }
+}
+
+.howto-modal {
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.85);
+
+  &__card {
+    position: relative;
+    height: min(88vh, 900px);
+    aspect-ratio: 9 / 16;
+    max-width: 100%;
+  }
+
+  &__video {
+    width: 100%;
+    height: 100%;
+    border-radius: $radius;
+    background: #000;
+    display: block;
+  }
+
+  &__close {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid $color-border;
+    background: $color-surface;
+    color: $color-text;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 1;
+
+    @media (max-width: 600px) { top: 8px; right: 8px; }
+  }
+}
+
+.howto-welcome {
+  @include card;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  border-color: rgba($color-primary, 0.5);
+  background: rgba($color-primary, 0.1);
+
+  &__thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: $color-primary;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  &__text {
+    flex: 1 1 200px;
+
+    strong { display: block; }
+    p { margin: 0.2rem 0 0; color: $color-text-muted; font-size: 0.88rem; }
+  }
+
+  &__actions { display: flex; gap: 0.5rem; align-items: center; }
+
+  .howto-btn { align-self: center; }
+
+  &__dismiss {
+    background: none;
+    border: none;
+    color: $color-text-muted;
+    cursor: pointer;
+    font-size: 0.88rem;
+    padding: 0.7rem 0.6rem;
+    min-height: 44px;
+
+    &:hover { color: $color-text; }
+  }
 }

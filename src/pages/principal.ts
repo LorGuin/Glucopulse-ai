@@ -23,6 +23,7 @@ import { saveCgmReadings, loadCgmReadings, mergeReadings } from "../services/cgm
 import { reportSensorData, trackCsvUpload, trackError } from "../services/telemetryService";
 import { FeedbackModal } from "../components/FeedbackModal";
 import { isAdminEmail } from "./admin";
+import { welcomeCardHtml, bindWelcomeCard, bindHowItWorksButtons } from "../components/HowItWorksVideo";
 
 export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLElement {
   const container = document.createElement("div");
@@ -264,6 +265,7 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
           </div>
           <div class="dashboard-header__actions">
             ${isAdminEmail(auth.currentUser?.email) ? `<button id="admin-btn" class="dashboard-header__settings" title="Monitoreo de testers">📋</button>` : ""}
+            <button type="button" class="dashboard-header__settings" data-open-howto title="Ver cómo funciona la app (video de 1 minuto)" aria-label="Ver cómo funciona la app">❔</button>
             <button id="feedback-btn" class="dashboard-header__settings" title="Contanos cómo te funciona la app">💬</button>
             <button id="emergency-settings-btn" class="dashboard-header__settings" title="Contactos de emergencia">⚙️</button>
             <button id="logout-btn" class="dashboard-header__logout">
@@ -272,6 +274,8 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
             </button>
           </div>
         </header>
+
+        ${welcomeCardHtml()}
 
         ${noDataYet ? `
         <section class="upload-box upload-box--warning">
@@ -369,6 +373,9 @@ export function initPrincipal(params?: { goTo: (path: string) => void }): HTMLEl
   };
 
   const attachEvents = () => {
+    bindHowItWorksButtons(container);
+    bindWelcomeCard(container, () => render());
+
     container.querySelector("#logout-btn")?.addEventListener("click", async () => {
       await signOut(auth);
       if (params?.goTo) params.goTo("/inicio");
